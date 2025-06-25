@@ -6,6 +6,7 @@ const contractABI = require("../../smartContract/contractABI.json");
 const walletModel = require("../../config/model/walletModel");
 
 const abi = contractABI;
+const providerUrl = process.env.EVM_NODE_HTTPS_MAINNET;
 
 const createWallet = asyncHandler(async (req, res) => { 
     const mnemonic = bip39.generateMnemonic();
@@ -62,9 +63,39 @@ const integrateWallet = asyncHandler(async (req, res) => {
         }
 );
 
-const walletBalance = asyncHandler();
+const walletBalance = asyncHandler(async(req, res) => {
+     const balance = await provider.getBalance(address);
+     res.json({
+                "StatusCode": 200,
+                "Message": "success",
+                "Data": {
+                    "details" : ethers.formatEther(balance)
+                }
+        });
+});
 
-const pay = asyncHandler();
+const pay = asyncHandler(async (req, res) =>{
+    const privateKey = req.body.PRIVATE_KEY;
+    const amountInEther = req.body.ETHER_AMOUNT; 
+    const toAddress = process.env.COMPANY_WALLET_ADDR;
+
+    const provider = new ethers.providers.JsonRpcProvider(providerUrl)
+    const wallet = new ethers.Wallet(privateKey, provider)
+    const tx = await wallet.sendTransaction({
+        to: toAddress,
+        value: ethers.parseEther(amountInEther) // e.g., "0.01"
+    });
+
+    console.log("Transaction hash:", tx.hash);
+    await tx.wait(); // Wait for confirmation
+        res.json({
+                "StatusCode": 200,
+                "Message": "success",
+                "Data": {
+                    "details" : tx
+                }
+        });
+});
 
 module.exports = {
     createWallet,
